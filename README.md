@@ -10,4 +10,17 @@ Most of the time, obtaining large and well-defined datasets to solve such proble
 
 In fact, in this work, we will use around 3064 images for training a deep learning model. For brain disease recognition, this may not seem much. But as we will see later on, this is a good starting point, which gives us a deep learning model that works fairly well.
 
+## The Brain Tumor Recognition/Classification Dataset
+  
+  We will use the [Brain Tumor Dataset](https://www.contributor-covenant.org/) to train a deep learning model in this work.
 
+The dataset contains images of brain from different types of tumor.
+
+This dataset contains a total of 3064 images with three classes:
+
+Healthy: Leaves with no diseases.
+Powdery: These are the leaves that are affected by powdery mildew disease. It is a type of fungal disease that can affect plants based on the time of year. You can read more about the disease here.
+Rust: The rust disease can affect different plants. It is a type of fungal disease as well. You may read more about it here.
+  
+ 
+  
