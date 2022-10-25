@@ -15,6 +15,7 @@ In fact, in this work, we will use around 3064 images for training a deep learni
   We will use the [Brain Tumor Dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427) to train a deep learning model in this work.
 
   This brain tumor dataset contains 3064 T1-weighted contrast-inhanced images with three kinds of brain tumor (glioma, meningioma, pituitary).
+  
+  <img src="[relative/path/in/repository/to/image.svg](https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/edit/main/types.png)" width="128"/>
 
 
-  ![plot]https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/edit/main/types.png)
