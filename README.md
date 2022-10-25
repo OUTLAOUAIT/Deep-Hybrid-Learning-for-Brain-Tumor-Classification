@@ -22,11 +22,11 @@ In fact, in this work, we will use around 3064 images for training a deep learni
   
 ## Image Pre-Processing
   ### Images normalization
-    The brain tumor images have low quality due to noises and low illumination. I proposed to convert the low pixel value images to brighter ones using data normalization and using the min-max normalization function method.
+  The brain tumor images have low quality due to noises and low illumination. I proposed to convert the low pixel value images to brighter ones using data normalization and using the min-max normalization function method.
 
   The MRI image as obtained from the database is unclear. These images also contain a certain amount of uncertainty. Therefore, brain images need to be normalized 
   before further processing. Usually, MRI images look like grey scale images. Hence, the  images are easily normalized to improve the image quality and reduce miscalculation.  This membership function of normalization is mainly used to normalize the image for enhancement with the range 0 to 1. Thus, it is also called the max-min normalization method.
 
   ###  Data Division and Augmentation
-    The deep neural network needs large datasets for better results but our dataset is limited. Our dataset contains 3064 brain images, further divided into 80% for training, which remains for testing and validation purposes. So, data augmentation is needed to change in the minor. I applied rotation, width-shift, height-shift, and the zoom—range for the data requirement. This will enhance the amount of training data, allowing the model to learn more effectively. This may assist in increasing the quantity of relevant data. It contributes to the reduction of overfitting and enhances generalization. 
+  The deep neural network needs large datasets for better results but our dataset is limited. Our dataset contains 3064 brain images, further divided into 80% for training, which remains for testing and validation purposes. So, data augmentation is needed to change in the minor. I applied rotation, width-shift, height-shift, and the zoom—range for the data requirement. This will enhance the amount of training data, allowing the model to learn more effectively. This may assist in increasing the quantity of relevant data. It contributes to the reduction of overfitting and enhances generalization. 
 
