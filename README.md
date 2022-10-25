@@ -12,7 +12,7 @@ In fact, in this work, we will use around 3064 images for training a deep learni
 
 ## The Brain Tumor Recognition/Classification Dataset
   
-  We will use the [Brain Tumor Dataset]([https://www.contributor-covenant.org/](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427)) to train a deep learning model in this work.
+  We will use the [Brain Tumor Dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427) to train a deep learning model in this work.
 
 The dataset contains images of brain from different types of tumor.
 
