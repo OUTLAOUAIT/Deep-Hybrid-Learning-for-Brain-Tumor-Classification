@@ -20,4 +20,6 @@ In fact, in this work, we will use around 3064 images for training a deep learni
   ![alt text]https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/edit/main/types.png?raw=true)
 
 
-  
+  ```md
+    ![alt text](main/types.png)
+    ```
