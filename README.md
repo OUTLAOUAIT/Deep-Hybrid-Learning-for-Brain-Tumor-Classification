@@ -17,4 +17,4 @@ In fact, in this work, we will use around 3064 images for training a deep learni
   This brain tumor dataset contains 3064 T1-weighted contrast-inhanced images with three kinds of brain tumor (glioma, meningioma, pituitary).
 
 
-  ![plot]https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/edit/main/types.png?raw=true)
+  ![plot]https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/edit/main/types.png)
