@@ -48,3 +48,7 @@ In fact, in this work, we will use around 3064 images for training a deep learni
 
   The confusion matrix presents misclassifications as a consequence of overfitting using 10% of testing data obtained from the original dataset of 
 3064. From the matrix it is observed that the misclassified tumors in the proposed method have 01 out of 438 testing images. The CNN  model perform the classification of the majority of the samples. 
+
+## Inference
+
+  <img src="https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/blob/main/inference.png"/>
