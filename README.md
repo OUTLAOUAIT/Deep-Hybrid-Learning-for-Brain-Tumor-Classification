@@ -29,7 +29,7 @@ In fact, in this work, we will use around 3064 images for training a deep learni
 
   ###  Data Division and Augmentation
   The deep neural network needs large datasets for better results but our dataset is limited. Our dataset contains 3064 brain images, further divided into 80% for training, which remains for testing and validation purposes. So, data augmentation is needed to change in the minor. I applied rotation, width-shift, height-shift, and the zoom—range for the data requirement. This will enhance the amount of training data, allowing the model to learn more effectively. This may assist in increasing the quantity of relevant data. It contributes to the reduction of overfitting and enhances generalization. 
-## Hybred Deep Learning Model
+## Hybrid Deep Learning Model
   
    In this work, I Designed a Hybrid Deep Learning Model which is a mix of pre-trained EfficientNetB0 with dense layers. This CNN model retrieved 224 × 224 enhanced MRI image data. The dense EfficientNet network has an alternate dense and drop-out layer. A dense layer is the basic layer which feeds all outputs from the previous layer to all its neurons, each neuron providing one output to the next layer. The drop-out layer is used to reduce the capacity or thin the network during training and avoids the overfitting. 
   
