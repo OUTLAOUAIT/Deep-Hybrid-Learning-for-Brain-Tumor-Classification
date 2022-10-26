@@ -32,4 +32,11 @@ In fact, in this work, we will use around 3064 images for training a deep learni
 ## Hybred Deep Learning Model
   
    In this work, I Designed a Hybrid Deep Learning Model which is a mix of pre-trained EfficientNetB0 with dense layers. This CNN model retrieved 224 × 224 enhanced MRI image data. The dense EfficientNet network has an alternate dense and drop-out layer. A dense layer is the basic layer which feeds all outputs from the previous layer to all its neurons, each neuron providing one output to the next layer. The drop-out layer is used to reduce the capacity or thin the network during training and avoids the overfitting. 
+  
   We begin by adding a drop-out layer followed by a pooling layer, then a drop-out layers to ensure the model runs smoothly. The drop-out values are 0.8. Finally, I have used a dense layer composed of three fully connected neurons in conjunction with a Softmax output layer to compute and classify the probability score for each class.
+  
+## Results 
+  
+  Numerous experimental assessments have been conducted to determine the suggested dense CNN model’s validity. All the experimental evaluations have been conducted using a Python programming environment with GPU support. First, pre-processing is performed to enhance the contrast in MRI images using max-min normalization and then the images are augmented for training. The proposed dense-CNN model activated the augmented tumors for better accuracy. The proposed model showed 99.77% accuracy on the testing dataset which is plotted in the next figure :
+  
+  
