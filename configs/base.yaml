@@ -1,0 +1,17 @@
+data_root: data/processed
+source: data/raw
+output: data/processed
+image_size: 224
+batch_size: 16
+epochs: 30
+patience: 6
+lr: 0.0001
+weight_decay: 0.0001
+seed: 42
+workers: 0
+pretrained: true
+freeze_backbone: false
+dropout: 0.3
+loss: cross_entropy
+class_weighting: false
+mixed_precision: true

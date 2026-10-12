@@ -1,0 +1,17 @@
+model: vit_b_16
+data_root: data/processed
+image_size: 224
+batch_size: 16
+epochs: 30
+patience: 6
+lr: 0.00005
+weight_decay: 0.0001
+seed: 42
+workers: 0
+pretrained: true
+freeze_backbone: false
+dropout: 0.1
+loss: cross_entropy
+class_weighting: false
+mixed_precision: true
+checkpoint: outputs/checkpoints/vit_b_16.pt

@@ -1,54 +1,77 @@
-<Deep-Hybrid-Learning-for-Brain-Tumor-Classification>
+# Brain Tumor Classification (PyTorch)
 
-## Description
+This repository provides a reproducible three-model classification project for the Figshare brain tumor dataset. The classes follow the notebook's implied mapping: `1 meningioma`, `2 glioma`, `3 pituitary`. The original notebook is preserved as `Hybrid_Deep_Learning_for_Brain_Tumor_classification.ipynb` for reference.
 
-In this repository, we will train a deep learning model for brain tumor recognition.
+## What changed
 
-Using deep learning and machine learning has helped to solve many medical issues. Deep learning based computer vision systems have been especially helpful. Such deep learning systems/models can easily recognize different diseases in medecin when we train them on the right dataset. For example, we can train a deep learning model to recognize different types of diseases in human brain.
+The notebook augmented images before splitting, allowing an augmented image and its source to cross train/test boundaries. It also split without stratification or patient grouping, used a preprocessing path inconsistent with pretrained ImageNet weights, and evaluated only one architecture. The new pipeline splits source images first, performs augmentation only in the training dataset, makes validation/test transforms deterministic, uses validation macro-F1 for checkpoint selection, and evaluates test data through a separate command. The split utility groups declared subject IDs and exact duplicate files. Patient-level separation cannot be guaranteed when source MAT files do not provide a usable `PID`.
 
-Most of the time, obtaining large and well-defined datasets to solve such problems becomes an issue. Because for deep learning models to recognize diseases in human body, they will need to train on huge amounts of data. But that does not mean we cannot train a simple deep learning model to check whether such models can work or not.
+## Models
 
-In fact, in this work, we will use around 3064 images for training a deep learning model. For brain disease recognition, this may not seem much. But as we will see later on, this is a good starting point, which gives us a deep learning model that works fairly well.
+1. `efficientnet_b0`: ImageNet initialized EfficientNet-B0 with a replaceable classifier.
+2. `efficientnet_vgg16_fusion`: EfficientNet-B0 and VGG16 feature maps are separately globally pooled and concatenated, followed by a compact trainable head. Both use the same ImageNet normalization.
+3. `vit_b_16`: torchvision ViT-B/16 with an adapted classifier.
 
-## The Brain Tumor Recognition/Classification Dataset
-  
-  We will use the [Brain Tumor Dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427) to train a deep learning model in this work.
+All models return logits for the shared cross-entropy training/evaluation pipeline. Freezing and pretrained weights are configurable. The fusion model is GPU-memory intensive; its example config freezes both backbones and uses batch size 8. ViT-B/16 is also substantial; lower batch size or backbone freezing is available in YAML. ImageNet weights download on first use when `pretrained: true`.
 
-  This brain tumor dataset contains 3064 T1-weighted contrast-inhanced images with three kinds of brain tumor (glioma, meningioma, pituitary) :
-  
-  <img src="https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/blob/main/Images/types.png"/>
+## Setup
 
-   These are mainly three kinds of brain tumors: one is meningioma which contains 708 pictures; the second is glioma which contains 1426 pictures; and lastly there is pituitary tumor which contains 930 pictures. 
-  
-## Dataset Preparation for Training
-  ### Images normalization
-  The brain tumor images have low quality due to noises and low illumination. I proposed to convert the low pixel value images to brighter ones using data normalization and using the min-max normalization function method.
+Use Python 3.8–3.11 and a PyTorch/torchvision build appropriate for your platform and CUDA version. Install the pinned CPU-compatible package versions below, or replace the PyTorch wheels with the official CUDA-matched build for your machine.
 
-  The MRI image as obtained from the database is unclear. These images also contain a certain amount of uncertainty. Therefore, brain images need to be normalized 
-  before further processing. Usually, MRI images look like grey scale images. Hence, the  images are easily normalized to improve the image quality and reduce miscalculation.  This membership function of normalization is mainly used to normalize the image for enhancement with the range 0 to 1. Thus, it is also called the max-min normalization method.
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-  ###  Data Division and Augmentation
-  The deep neural network needs large datasets for better results but our dataset is limited. Our dataset contains 3064 brain images, further divided into 80% for training, which remains for testing and validation purposes. So, data augmentation is needed to change in the minor. I applied rotation, width-shift, height-shift, and the zoom—range for the data requirement. This will enhance the amount of training data, allowing the model to learn more effectively. This may assist in increasing the quantity of relevant data. It contributes to the reduction of overfitting and enhances generalization. 
-## Hybrid Deep Learning Model
-  
-   In this work, I Designed a Hybrid Deep Learning Model which is a mix of pre-trained EfficientNetB0 with dense layers. This CNN model retrieved 224 × 224 enhanced MRI image data. The dense EfficientNet network has an alternate dense and drop-out layer. A dense layer is the basic layer which feeds all outputs from the previous layer to all its neurons, each neuron providing one output to the next layer. The drop-out layer is used to reduce the capacity or thin the network during training and avoids the overfitting. 
-  
-  We begin by adding a drop-out layer followed by a pooling layer, then a drop-out layers to ensure the model runs smoothly. The drop-out values are 0.8. Finally, I have used a dense layer composed of three fully connected neurons in conjunction with a Softmax output layer to compute and classify the probability score for each class.
-  
-## Results 
-  
-  Numerous experimental assessments have been conducted to determine the suggested dense CNN model’s validity. All the experimental evaluations have been conducted using a Python programming environment with GPU support. First, pre-processing is performed to enhance the contrast in MRI images using max-min normalization and then the images are augmented for training. The proposed dense-CNN model activated the augmented tumors for better accuracy. The proposed model showed 99.77% accuracy on the testing dataset which is plotted in the next figure :
-  
-  
-  <img src="https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/blob/main/Images/curves.png"/>
+The commands below assume the dependencies in `requirements.txt` are installed. Use a PyTorch/torchvision build compatible with your platform and CUDA version if you plan to train on a GPU.
 
-  Different performance measures, such as accuracy, precision, recall, and F1-score, were utilized to detect the suggested model’s performance. These parameters are evaluated using the confusion matrix. The details were also examined using the confusion matrix which is shown in the next Figure :
-  
-   <img src="https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/blob/main/Images/Confusion matrix.png"/>
+## Data preparation
 
-  The confusion matrix presents misclassifications as a consequence of overfitting using 10% of testing data obtained from the original dataset of 
-3064. From the matrix it is observed that the misclassified tumors in the proposed method have 01 out of 438 testing images. The CNN  model perform the classification of the majority of the samples. 
+Download the [Figshare brain tumor dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427) and place its extracted `*.mat` files under `data/raw/` (subdirectories are fine). It contains 3,064 T1-weighted contrast-enhanced images across meningioma, glioma, and pituitary classes. The preparation command extracts `cjdata.image`, maps the documented numeric labels, converts each image to per-image min-max grayscale PNG, and writes `data/processed/manifest.csv` plus train/val/test CSVs.
 
-## Inference
+```bash
+python -m scripts.prepare_data --config configs/base.yaml
+```
 
-  <img src="https://github.com/OUTLAOUAIT/Deep-Hybrid-Learning-for-Brain-Tumor-Classification/blob/main/Images/inference.png"/>
+The split is approximately 80/10/10 within classes at the independent group level. It uses `cjdata.PID` when present; otherwise exact file-byte duplicates are grouped. The script fails on conflicting labels within one group or too few independent groups per class. Inspect the resulting split counts and verify source-specific subject metadata before treating results as clinical evidence.
+
+## Training
+
+Run the same training engine with the requested model config:
+
+```bash
+python -m scripts.train --config configs/efficientnet_b0.yaml
+python -m scripts.train --config configs/efficientnet_vgg16_fusion.yaml
+python -m scripts.train --config configs/vit.yaml
+```
+
+Configurations define image size, batch size, epochs, learning rate, weight decay, seed, pretrained weights, freezing, dropout, AMP and checkpoint location. The trainer saves the best validation macro-F1 checkpoint and an epoch history JSON next to it. CUDA is selected when available; CPU is supported. Mixed precision is enabled only for CUDA.
+
+## Evaluation and comparison
+
+Evaluate each selected checkpoint exactly once on the test split. Reports include accuracy, macro/weighted F1, macro precision/recall, a confusion matrix, per-class report, and one-vs-rest macro ROC-AUC when defined.
+
+```bash
+python -m scripts.evaluate --config configs/efficientnet_b0.yaml --checkpoint outputs/checkpoints/efficientnet_b0.pt --output outputs/reports/efficientnet_b0.json
+python -m scripts.evaluate --config configs/efficientnet_vgg16_fusion.yaml --checkpoint outputs/checkpoints/efficientnet_vgg16_fusion.pt --output outputs/reports/efficientnet_vgg16_fusion.json
+python -m scripts.evaluate --config configs/vit.yaml --checkpoint outputs/checkpoints/vit_b_16.pt --output outputs/reports/vit_b_16.json
+python -m scripts.compare_models --output-dir outputs/reports/
+```
+
+Comparison joins test reports to saved histories, ranks by the best validation macro-F1, and shows test metrics separately. It never creates missing results. Architecture-specific batch sizes and compute are not identical, so report training hardware, duration, and configuration alongside scores. Repeated seeds are not automated yet.
+
+## Verification
+
+Run `python -m unittest discover -s tests` after installing dependencies. The suite covers manifest loading and transforms, split reproducibility/duplicate separation, metrics, a tiny training/checkpoint smoke test, and all model output shapes. Real-dataset smoke tests remain to be performed because no MAT data or PyTorch runtime was available during this refactor. Full-scale training is intentionally not launched by the project commands.
+
+## Limitations
+
+- No dataset or verified patient metadata is committed. A patient-level split is possible only when `cjdata.PID` is present and correctly parsed.
+- Split fallback detects byte-identical duplicates, not near-duplicates.
+- The supplied notebook did not document an untouched subject-independent test cohort; this project establishes a new split, not an external validation.
+- Transform choices and model hyperparameters are sensible starting points and require validation-only tuning.
+- The pipeline currently reports training duration in the history file but does not benchmark inference latency or automatically generate plots.
+- This is a research/engineering refactor and is not a medical diagnostic system.

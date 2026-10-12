@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+data/raw/
+data/processed/
+outputs/checkpoints/
+outputs/logs/
+outputs/figures/
+outputs/reports/*.json
+outputs/reports/*.csv
