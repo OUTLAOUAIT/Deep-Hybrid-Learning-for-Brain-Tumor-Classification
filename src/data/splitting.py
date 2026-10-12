@@ -79,9 +79,11 @@ def create_splits(rows, root, output_dir, seed=42, ratios=(0.8, 0.1, 0.1)):
 def validate_splits(splits, root):
     seen = set()
     for split in splits:
+        split_identities = set()
         for row in split:
             identities = set(_identities(row, root))
             if identities & seen:
                 raise ValueError("Group or exact duplicate crosses split boundaries")
-            seen.update(identities)
+            split_identities.update(identities)
+        seen.update(split_identities)
     return True

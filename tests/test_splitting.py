@@ -33,6 +33,19 @@ class SplitTests(unittest.TestCase):
             parts = create_splits(rows, root, root / "splits")
             self.assertTrue(validate_splits(parts, root))
 
+    def test_patient_group_can_have_multiple_rows_inside_one_split(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "first.bin"
+            second = root / "second.bin"
+            first.write_bytes(b"slice one")
+            second.write_bytes(b"slice two")
+            rows = [{"path": first.name, "label": "glioma", "group": "patient-1"},
+                    {"path": second.name, "label": "glioma", "group": "patient-1"}]
+            self.assertTrue(validate_splits([rows, []], root))
+            with self.assertRaises(ValueError):
+                validate_splits([[rows[0]], [rows[1]]], root)
+
 
 if __name__ == "__main__":
     unittest.main()
