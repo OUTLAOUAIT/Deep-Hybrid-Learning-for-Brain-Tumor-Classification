@@ -56,12 +56,17 @@ def fit(model, train_loader, val_loader, config, checkpoint, device):
     criterion = build_loss(config, class_weights)
     best, stale, history = -1.0, 0, []
     started = time.time()
-    for epoch in range(config.get("epochs", 30)):
+    total_epochs = config.get("epochs", 30)
+    print("Training on {} for up to {} epochs".format(device, total_epochs), flush=True)
+    for epoch in range(total_epochs):
         train = _epoch(model, train_loader, criterion, device, optimizer, scaler)
         val = _epoch(model, val_loader, criterion, device)
         row = {"epoch": epoch + 1, "train": train, "val": val}
         history.append(row)
         scheduler.step(val["macro_f1"])
+        print("Epoch {}/{} - train loss {:.4f}, acc {:.4f} | val loss {:.4f}, acc {:.4f}, macro-F1 {:.4f}".format(
+            epoch + 1, total_epochs, train["loss"], train["accuracy"],
+            val["loss"], val["accuracy"], val["macro_f1"]), flush=True)
         if val["macro_f1"] > best:
             best, stale = val["macro_f1"], 0
             Path(checkpoint).parent.mkdir(parents=True, exist_ok=True)
@@ -75,4 +80,6 @@ def fit(model, train_loader, val_loader, config, checkpoint, device):
     history_path.write_text(json.dumps(
         {"history": history, "training_seconds": time.time() - started}, indent=2), encoding="utf-8")
     plot_history(history, Path("outputs/figures") / (Path(checkpoint).stem + "_curves.png"))
+    print("Training complete in {:.1f}s. Best validation macro-F1: {:.4f}. Checkpoint: {}".format(
+        time.time() - started, best, checkpoint), flush=True)
     return history
