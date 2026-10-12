@@ -16,8 +16,17 @@ from src.utils.reproducibility import seed_everything
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
+    parser.add_argument("--image-size", type=int, choices=(224, 384), default=None)
+    parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--checkpoint", default=None)
     args = parser.parse_args()
     config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
+    if args.image_size is not None:
+        config["image_size"] = args.image_size
+    if args.batch_size is not None:
+        config["batch_size"] = args.batch_size
+    if args.checkpoint:
+        config["checkpoint"] = args.checkpoint
     seed_everything(config.get("seed", 42))
     root = Path(config["data_root"])
     train_rows = load_manifest(root / "splits/train.csv")
@@ -25,13 +34,15 @@ def main():
     classes = sorted({row["label"] for row in train_rows})
     mapping = {name: i for i, name in enumerate(classes)}
     ds = lambda rows, training: BrainTumorDataset(rows, root,
-                      build_transforms(config["image_size"], training), mapping)
+                      build_transforms(config["image_size"], training,
+                                       config.get("normalization", "imagenet")), mapping)
     loader_args = {"batch_size": config["batch_size"], "num_workers": config.get("workers", 0)}
     train_loader = DataLoader(ds(train_rows, True), shuffle=True, **loader_args)
     val_loader = DataLoader(ds(val_rows, False), shuffle=False, **loader_args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = build_model(config["model"], len(classes), config.get("pretrained", True),
-                        config.get("dropout", 0.3), config.get("freeze_backbone", False))
+                        config.get("dropout", 0.3), config.get("freeze_backbone", False),
+                        config["image_size"])
     fit(model, train_loader, val_loader, config,
         config.get("checkpoint", "outputs/checkpoints/model.pt"), device)
 

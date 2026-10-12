@@ -24,11 +24,15 @@ def main():
     rows = load_manifest(root / "splits/test.csv")
     classes = sorted({row["label"] for row in rows})
     mapping = {name: i for i, name in enumerate(classes)}
-    ds = BrainTumorDataset(rows, root, build_transforms(config["image_size"]), mapping)
+    ds = BrainTumorDataset(rows, root,
+                           build_transforms(config["image_size"],
+                                            normalization=config.get("normalization", "imagenet")),
+                           mapping)
     loader = DataLoader(ds, batch_size=config["batch_size"], shuffle=False)
     # Checkpoint contains the complete backbone state, so evaluation needs no weight download.
     model = build_model(config["model"], len(classes), False,
-                        config.get("dropout", 0.3), config.get("freeze_backbone", False))
+                        config.get("dropout", 0.3), config.get("freeze_backbone", False),
+                        config["image_size"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     result = evaluate(model, loader, args.checkpoint, device)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)

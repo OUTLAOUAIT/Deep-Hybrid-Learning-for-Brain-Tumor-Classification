@@ -11,6 +11,7 @@ workers: 0
 pretrained: true
 freeze_backbone: false
 dropout: 0.1
+normalization: vit_keras
 loss: cross_entropy
 class_weighting: false
 mixed_precision: true

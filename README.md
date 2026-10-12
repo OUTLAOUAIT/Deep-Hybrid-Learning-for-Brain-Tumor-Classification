@@ -1,6 +1,6 @@
 # Brain Tumor Classification (PyTorch)
 
-This repository provides a reproducible three-model classification project for the Figshare brain tumor dataset. The classes follow the notebook's implied mapping: `1 meningioma`, `2 glioma`, `3 pituitary`. The original notebook is preserved as `Hybrid_Deep_Learning_for_Brain_Tumor_classification.ipynb` for reference.
+This repository provides a reproducible brain tumor classification project for the Figshare brain tumor dataset. The classes follow the notebook's implied mapping: `1 meningioma`, `2 glioma`, `3 pituitary`. The original notebook is preserved as `Hybrid_Deep_Learning_for_Brain_Tumor_classification.ipynb` for reference.
 
 ## What changed
 
@@ -10,9 +10,9 @@ The notebook augmented images before splitting, allowing an augmented image and 
 
 1. `efficientnet_b0`: ImageNet initialized EfficientNet-B0 with a replaceable classifier.
 2. `efficientnet_vgg16_fusion`: EfficientNet-B0 and VGG16 feature maps are separately globally pooled and concatenated, followed by a compact trainable head. Both use the same ImageNet normalization.
-3. `vit_b_16`: torchvision ViT-B/16 with an adapted classifier.
+3. `vit_b_16`, `vit_b_32`, `vit_l_16`, and `vit_l_32`: the four ViT variants used in the paper, with pretrained backbones and task-specific classifiers.
 
-All models return logits for the shared cross-entropy training/evaluation pipeline. Freezing and pretrained weights are configurable. The fusion model is GPU-memory intensive; its example config freezes both backbones and uses batch size 8. ViT-B/16 is also substantial; lower batch size or backbone freezing is available in YAML. ImageNet weights download on first use when `pretrained: true`.
+All models return logits for the shared cross-entropy training/evaluation pipeline. Freezing and pretrained weights are configurable. The fusion model is GPU-memory intensive; its example config freezes both backbones and uses batch size 8. ViT-L variants need smaller Colab batches, especially at 384×384. Pretrained weights download on first use when `pretrained: true`.
 
 ## Setup
 
@@ -70,16 +70,22 @@ Comparison joins test reports to saved histories, ranks by the best validation m
 
 ## Soft-voting ensemble
 
-The ensemble method from Tummala et al. (2022) averages the softmax class probabilities from each member with equal weight, then predicts the class with the largest mean probability. Evaluate any set of trained checkpoints that share the same image size, test split, and class mapping with:
+The paper's ensemble consists of ViT-B/16, ViT-B/32, ViT-L/16, and ViT-L/32. It averages their softmax probabilities with equal weight, then predicts the class with the largest mean probability. This project provides these four model variants and uses the paper's `[-1, 1]` ViT input scaling. Train each checkpoint separately at the same resolution:
 
 ```bash
-python -m scripts.ensemble \
-  --configs configs/efficientnet_b0.yaml configs/efficientnet_vgg16_fusion.yaml configs/vit.yaml \
-  --checkpoints outputs/checkpoints/efficientnet_b0.pt outputs/checkpoints/efficientnet_vgg16_fusion.pt outputs/checkpoints/vit_b_16.pt \
-  --output outputs/reports/ensemble_224.json
+!python -m scripts.train --config configs/vit_b_16.yaml --image-size 224 --checkpoint outputs/checkpoints/vit_b_16_224.pt
+!python -m scripts.train --config configs/vit_b_32.yaml --image-size 224 --checkpoint outputs/checkpoints/vit_b_32_224.pt
+!python -m scripts.train --config configs/vit_l_16.yaml --image-size 224 --batch-size 2 --checkpoint outputs/checkpoints/vit_l_16_224.pt
+!python -m scripts.train --config configs/vit_l_32.yaml --image-size 224 --batch-size 2 --checkpoint outputs/checkpoints/vit_l_32_224.pt
 ```
 
-In Colab, run the same command with `!` at the start. Keep all members at the same resolution (the provided configs use 224×224); the script rejects mixed resolutions or data roots. It writes ensemble metrics to the requested JSON file and a confusion matrix to `outputs/figures/`. The paper separately ensembled ViT-B/16, ViT-B/32, ViT-L/16, and ViT-L/32 checkpoints at 224×224 and 384×384; those four architectures are not all implemented in this repository, so an ensemble of the provided models is a project extension using the paper's averaging rule, not a reproduction of its reported result.
+For 384×384, repeat with `--image-size 384` and `_384` checkpoint names; use `--batch-size 1` or `2` if Colab runs out of GPU memory. The paper used a TPU for high-resolution training. Evaluate the 224×224 checkpoints together:
+
+```bash
+!python -m scripts.ensemble --configs configs/vit_b_16.yaml configs/vit_b_32.yaml configs/vit_l_16.yaml configs/vit_l_32.yaml --checkpoints outputs/checkpoints/vit_b_16_224.pt outputs/checkpoints/vit_b_32_224.pt outputs/checkpoints/vit_l_16_224.pt outputs/checkpoints/vit_l_32_224.pt --image-size 224 --output outputs/reports/vit_ensemble_224.json
+```
+
+Use the `_384.pt` checkpoints, `--image-size 384`, and `vit_ensemble_384.json` for the high-resolution ensemble. The code uses PyTorch ports of the original ViT families, while the paper used `vit-keras`; its reported scores also used a different data split and training setup, so they should not be treated as expected results here. The script saves ensemble metrics and a confusion matrix.
 
 ## Verification
 

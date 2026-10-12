@@ -29,9 +29,11 @@ def ensemble_probabilities(configs, checkpoints, loader, classes, device):
     for config, checkpoint in zip(configs, checkpoints):
         model = build_model(config["model"], len(classes), False,
                             config.get("dropout", 0.3),
-                            config.get("freeze_backbone", False))
-        state = torch.load(checkpoint, map_location=device)
+                            config.get("freeze_backbone", False),
+                            config["image_size"])
+        state = torch.load(checkpoint, map_location="cpu")
         model.load_state_dict(state["model"])
+        del state
         model.to(device).eval()
         parameter_count += sum(parameter.numel() for parameter in model.parameters())
         model_probabilities = []
@@ -52,6 +54,8 @@ def ensemble_probabilities(configs, checkpoints, loader, classes, device):
         current = torch.cat(model_probabilities, dim=0)
         total_probabilities = current if total_probabilities is None else total_probabilities + current
         del model
+        if str(device).startswith("cuda"):
+            torch.cuda.empty_cache()
 
     mean_probabilities = total_probabilities / len(configs)
     result = classification_metrics(actual, mean_probabilities.argmax(dim=1).tolist(),
@@ -74,25 +78,37 @@ def main():
     parser.add_argument("--checkpoints", nargs="+", required=True,
                         help="Trained checkpoint paths in the same order as --configs")
     parser.add_argument("--output", default="outputs/reports/ensemble.json")
+    parser.add_argument("--image-size", type=int, choices=(224, 384), default=None,
+                        help="Override the shared input resolution (224 or 384)")
+    parser.add_argument("--batch-size", type=int, default=None,
+                        help="Override the ensemble inference batch size (lower for Colab GPU RAM)")
     args = parser.parse_args()
 
     if len(args.configs) != len(args.checkpoints):
         parser.error("Provide exactly one checkpoint for each config")
     configs = [_read_config(path) for path in args.configs]
+    if args.image_size is not None:
+        for config in configs:
+            config["image_size"] = args.image_size
     image_sizes = {config["image_size"] for config in configs}
     data_roots = {str(Path(config["data_root"]).resolve()) for config in configs}
     if len(image_sizes) != 1:
         parser.error("All ensemble members must use the same image_size")
     if len(data_roots) != 1:
         parser.error("All ensemble members must use the same data_root")
+    normalizations = {config.get("normalization", "imagenet") for config in configs}
+    if len(normalizations) != 1:
+        parser.error("All ensemble members must use the same input normalization")
 
     root = Path(configs[0]["data_root"])
     rows = load_manifest(root / "splits/test.csv")
     classes = sorted({row["label"] for row in rows})
     mapping = {name: index for index, name in enumerate(classes)}
     dataset = BrainTumorDataset(rows, root,
-                                build_transforms(configs[0]["image_size"]), mapping)
-    batch_size = min(config.get("batch_size", 32) for config in configs)
+                                build_transforms(configs[0]["image_size"],
+                                    normalization=configs[0].get("normalization", "imagenet")),
+                                mapping)
+    batch_size = args.batch_size or min(config.get("batch_size", 32) for config in configs)
     workers = min(config.get("workers", 0) for config in configs)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
                         num_workers=workers)
