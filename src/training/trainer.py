@@ -18,7 +18,7 @@ def _epoch(model, loader, criterion, device, optimizer=None, scaler=None):
         if training:
             optimizer.zero_grad(set_to_none=True)
         with torch.set_grad_enabled(training):
-            with torch.cuda.amp.autocast(enabled=(scaler is not None)):
+            with torch.amp.autocast(device_type=device.type, enabled=(scaler is not None)):
                 logits = model(images)
                 loss = criterion(logits, labels)
             if training:
@@ -44,7 +44,7 @@ def fit(model, train_loader, val_loader, config, checkpoint, device):
                                   weight_decay=config.get("weight_decay", 0.0001))
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", patience=2)
     use_amp = bool(config.get("mixed_precision", False) and str(device).startswith("cuda"))
-    scaler = torch.cuda.amp.GradScaler(enabled=True) if use_amp else None
+    scaler = torch.amp.GradScaler("cuda", enabled=True) if use_amp else None
     class_weights = None
     if config.get("class_weighting", False):
         rows = train_loader.dataset.rows
