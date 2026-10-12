@@ -16,13 +16,18 @@ All models return logits for the shared cross-entropy training/evaluation pipeli
 
 ## Setup
 
-Use Python 3.8–3.11 and a PyTorch/torchvision build appropriate for your platform and CUDA version. Install the pinned CPU-compatible package versions below, or replace the PyTorch wheels with the official CUDA-matched build for your machine.
+Use Python 3.9 or newer. Google Colab already provides a compatible PyTorch/torchvision pair for its runtime and CUDA version, so the requirements file leaves those packages unpinned and does not replace Colab's build. For a local environment, install PyTorch and torchvision together using the [official PyTorch install selector](https://pytorch.org/get-started/locally/), then install the remaining project dependencies:
 
 ```bash
+# Google Colab:
+!pip install -r requirements.txt
+
+# Local environment:
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/macOS: source .venv/bin/activate
 python -m pip install --upgrade pip
+# First install the matching torch/torchvision pair from pytorch.org.
 python -m pip install -r requirements.txt
 ```
 

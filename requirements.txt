@@ -1,8 +1,8 @@
-torch==2.0.1
-torchvision==0.15.2
-scikit-learn==1.3.2
-numpy==1.24.4
-Pillow==10.4.0
-PyYAML==6.0.2
-pymatreader==0.0.32
-matplotlib==3.7.5
+# Google Colab supplies a compatible torch/torchvision pair and CUDA build.
+# Install that pair separately for local environments using the PyTorch selector.
+scikit-learn>=1.5,<2
+numpy>=1.26,<3
+Pillow>=10.4,<13
+PyYAML>=6.0.2,<7
+pymatreader>=0.0.32,<1
+matplotlib>=3.7.5,<4
