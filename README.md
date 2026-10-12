@@ -68,6 +68,19 @@ python -m scripts.compare_models --output-dir outputs/reports/
 
 Comparison joins test reports to saved histories, ranks by the best validation macro-F1, and shows test metrics separately. It never creates missing results. Architecture-specific batch sizes and compute are not identical, so report training hardware, duration, and configuration alongside scores. Repeated seeds are not automated yet.
 
+## Soft-voting ensemble
+
+The ensemble method from Tummala et al. (2022) averages the softmax class probabilities from each member with equal weight, then predicts the class with the largest mean probability. Evaluate any set of trained checkpoints that share the same image size, test split, and class mapping with:
+
+```bash
+python -m scripts.ensemble \
+  --configs configs/efficientnet_b0.yaml configs/efficientnet_vgg16_fusion.yaml configs/vit.yaml \
+  --checkpoints outputs/checkpoints/efficientnet_b0.pt outputs/checkpoints/efficientnet_vgg16_fusion.pt outputs/checkpoints/vit_b_16.pt \
+  --output outputs/reports/ensemble_224.json
+```
+
+In Colab, run the same command with `!` at the start. Keep all members at the same resolution (the provided configs use 224×224); the script rejects mixed resolutions or data roots. It writes ensemble metrics to the requested JSON file and a confusion matrix to `outputs/figures/`. The paper separately ensembled ViT-B/16, ViT-B/32, ViT-L/16, and ViT-L/32 checkpoints at 224×224 and 384×384; those four architectures are not all implemented in this repository, so an ensemble of the provided models is a project extension using the paper's averaging rule, not a reproduction of its reported result.
+
 ## Verification
 
 Run `python -m unittest discover -s tests` after installing dependencies. The suite covers manifest loading and transforms, split reproducibility/duplicate separation, metrics, a tiny training/checkpoint smoke test, and all model output shapes. Real-dataset smoke tests remain to be performed because no MAT data or PyTorch runtime was available during this refactor. Full-scale training is intentionally not launched by the project commands.
