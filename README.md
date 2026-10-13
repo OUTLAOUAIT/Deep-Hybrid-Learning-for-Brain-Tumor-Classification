@@ -1,111 +1,124 @@
-# Brain Tumor Classification (PyTorch)
+# Brain Tumor Classification: CNNs and Vision Transformers
 
-This repository provides a comparative brain tumor classification study using transfer learning on the Figshare dataset. It benchmarks VGG16, MobileNetV2, EfficientNet-B3, four Vision Transformer variants, and a ViT soft-voting ensemble. The original notebook is preserved as `Hybrid_Deep_Learning_for_Brain_Tumor_classification.ipynb` for reference.
+A reproducible PyTorch comparative study of transfer learning and fine-tuning for three-class brain tumor MRI classification. The project benchmarks three CNNs against four Vision Transformers (ViTs), evaluates models with class-balanced metrics, and implements an equal-weight ViT soft-voting ensemble.
 
-## What changed
+> **Research status (October 2026):** The three CNN validation selection scores below came from one Colab run. The runtime crashed before ViT training. No ViT result is reported as an experiment yet, and the reported CNN values are not held-out test scores. The full comparison is ready to complete when GPU/TPU access is available.
 
-The notebook augmented images before splitting, allowing an augmented image and its source to cross train/test boundaries. It also split without patient grouping, used a preprocessing path inconsistent with pretrained ImageNet weights, and evaluated only one architecture. The refactored pipeline splits source images first, augments only training data, keeps validation/test transforms deterministic, uses validation accuracy and macro precision/recall for model selection, and evaluates the test split separately. Patient-level separation cannot be guaranteed when source MAT files do not provide a usable `PID`.
+![Illustrative brain MRI slices from the repository's original image assets](Images/types.png)
 
-## Models
+*Illustrative MRI slices from the original project assets; this is not a model prediction or an evaluation figure.*
 
-CNN comparison: `vgg16`, `mobilenet_v2`, and `efficientnet_b3`.
+## Study question
 
-ViT comparison: `vit_b_16`, `vit_b_32`, `vit_l_16`, and `vit_l_32`, plus an equal-weight soft-voting ensemble of those four models.
+How do established CNN architectures and ImageNet-pretrained ViT architectures compare on the same Figshare brain tumor dataset when fine-tuned with a consistent, leakage-conscious split and selected using validation accuracy, macro precision, and macro recall?
 
-Each individual model starts from ImageNet pretrained weights and fine-tunes the complete network (`pretrained: true`, `freeze_backbone: false`). The configs use inverse-frequency class-weighted cross-entropy. ViTs use the paper's `[-1, 1]` input scaling; CNNs use ImageNet normalization. Pretrained weights download on first use.
+### Models in the comparison
 
-## Setup
+| Family | Models | Status |
+|---|---|---|
+| CNN | VGG16, MobileNetV2, EfficientNet-B3 | Trained once; validation selection scores recorded below. Held-out test evaluation still needs to be run. |
+| ViT | ViT-B/16, ViT-B/32, ViT-L/16, ViT-L/32 | Configured; training pending. |
+| Ensemble | Equal-weight soft voting across the four ViTs | Configured; requires all four trained checkpoints. |
 
-Use Python 3.9 or newer. Google Colab already provides a compatible PyTorch/torchvision pair for its runtime and CUDA version, so the requirements file leaves those packages unpinned and does not replace Colab's build. For a local environment, install PyTorch and torchvision together using the [official PyTorch install selector](https://pytorch.org/get-started/locally/), then install the remaining project dependencies:
+MobileNetV2 is the specific torchvision model used for the “MobileNet” comparison. The CNN model shortlist is motivated by a published brain MRI CNN comparison that identifies EfficientNetB3 and MobileNet among its top performers and also reports VGG16 results. The published study's scores are literature context only; they are not substituted for this project's results. [CNN comparison paper](https://pmc.ncbi.nlm.nih.gov/articles/PMC10862681/)
+
+## Current results
+
+The score used for checkpoint selection is the unweighted average of validation accuracy, macro precision, and macro recall. Macro averaging weights the three classes equally, which is useful because Figshare's class counts are imbalanced. These values are **validation selection scores** (not accuracy percentages and not test-set results).
+
+| Rank so far | CNN model | Best validation selection score | Training time | Checkpoint |
+|---:|---|---:|---:|---|
+| 1 | MobileNetV2 | 0.9907 | 473.5 s | `outputs/checkpoints/mobilenet_v2.pt` |
+| 2 | EfficientNet-B3 | 0.9880 | 415.9 s | `outputs/checkpoints/efficientnet_b3.pt` |
+| 3 | VGG16 | 0.9787 | 1,397.3 s | `outputs/checkpoints/vgg16.pt` |
+
+These numbers describe the run as reported by the training process. The per-model validation accuracy, macro precision, and macro recall are stored in each checkpoint's `.history.json`; use those and the held-out test reports for a full comparison. A validation score must not be presented as test performance. Runtime is hardware-dependent and is included only as the reported Colab run time.
+
+| ViT / ensemble | Project result |
+|---|---|
+| ViT-B/16 | Pending training and held-out evaluation |
+| ViT-B/32 | Pending training and held-out evaluation |
+| ViT-L/16 | Pending training and held-out evaluation |
+| ViT-L/32 | Pending training and held-out evaluation |
+| Four-model soft-voting ensemble | Pending four checkpoints and evaluation |
+
+## Data and leakage controls
+
+The study uses the [Figshare brain tumor dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427), containing 3,064 T1-weighted contrast-enhanced images labeled as meningioma (708), glioma (1,426), or pituitary tumor (930). Raw images are converted from the dataset's MATLAB `.mat` format to PNG and recorded in a manifest.
+
+The earlier notebook had an important evaluation risk: it generated augmented images before splitting the dataset. A transformed copy could therefore land in a different split from its source image, making test results overly optimistic. It also split without subject grouping. Its historical metrics and plots are intentionally not presented here as evidence for the refactored models. The replacement Colab notebook follows the current pipeline.
+
+The current preparation code splits before augmentation, then applies random augmentation only to the training dataset. It groups records by `cjdata.PID` when present and also groups byte-identical images. Validation and test transformations are deterministic. **Limitation:** exact-duplicate grouping is not a near-duplicate detector; if usable patient IDs are absent, this pipeline cannot guarantee subject-level independence.
+
+## Method
+
+1. Convert MAT files and prepare deterministic, class-aware train/validation/test manifests (80/10/10 target ratios at the independent group level).
+2. Initialize CNNs and ViTs from ImageNet-pretrained weights; train the classification head and backbone end-to-end (the current configs do not use a frozen-backbone warm-up stage).
+3. Use train-only image augmentation and inverse-frequency class-weighted cross-entropy.
+4. Monitor validation accuracy, macro precision, and macro recall. Select checkpoints by their mean; use `ReduceLROnPlateau` and early stopping (patience 6 epochs).
+5. Once training is complete, evaluate each selected checkpoint on the held-out test split and report accuracy, balanced accuracy, macro/weighted precision and recall, F1, confusion matrix, and per-class metrics.
+6. Compare model selection with validation data only; use the test set for final reporting, not tuning.
+
+```mermaid
+flowchart LR
+    A[Figshare MAT files] --> B[Convert to image manifest]
+    B --> C[Group duplicate / patient records]
+    C --> D[Train / validation / test split]
+    D --> E[Train-only augmentation + class-weighted loss]
+    E --> F[CNN and ViT transfer learning / fine-tuning]
+    F --> G[Validation selection + early stopping]
+    G --> H[Held-out test metrics]
+    G --> I[Four-ViT equal-weight soft-voting ensemble]
+    I --> H
+```
+
+This is a research comparison, not a medical diagnostic system. The selected hyperparameters are starting settings rather than the result of an exhaustive hyperparameter search.
+
+## Run on Google Colab
+
+The notebook [`How_to_train_using_Colab_GPU.ipynb`](How_to_train_using_Colab_GPU.ipynb) walks through cloning the repo, preparing Figshare data, saving checkpoints to Google Drive, training models one at a time, evaluating, and comparing results. Enable a GPU in **Runtime → Change runtime type**. The notebook is designed to preserve completed checkpoints if a Colab runtime disconnects.
+
+For command-line use, install the requirements and place extracted Figshare MAT files in `data/raw/`:
 
 ```bash
-# Google Colab:
-!pip install -r requirements.txt
-
-# Local environment:
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# Linux/macOS: source .venv/bin/activate
-python -m pip install --upgrade pip
-# First install the matching torch/torchvision pair from pytorch.org.
 python -m pip install -r requirements.txt
+python -m scripts.prepare_data --source data/raw --output data/processed
+python -m scripts.train --config configs/vgg16.yaml
+python -m scripts.train --config configs/mobilenet_v2.yaml
+python -m scripts.train --config configs/efficientnet_b3.yaml
+python -m scripts.train --config configs/vit_b_16.yaml
+python -m scripts.train --config configs/vit_b_32.yaml
+python -m scripts.train --config configs/vit_l_16.yaml --batch-size 2
+python -m scripts.train --config configs/vit_l_32.yaml --batch-size 2
 ```
 
-The commands below assume the dependencies in `requirements.txt` are installed. Use a PyTorch/torchvision build compatible with your platform and CUDA version if you plan to train on a GPU.
-
-## Data preparation
-
-Download the [Figshare brain tumor dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427) and place its extracted `*.mat` files under `data/raw/` (subdirectories are fine). It contains 3,064 T1-weighted contrast-enhanced images across meningioma, glioma, and pituitary classes. The preparation command extracts `cjdata.image`, maps the documented numeric labels, converts each image to per-image min-max grayscale PNG, and writes `data/processed/manifest.csv` plus train/val/test CSVs.
-
-The class counts are 708 meningioma, 1,426 glioma, and 930 pituitary images. Training uses inverse-frequency class weights; validation and test reports include macro, weighted, and per-class precision/recall so overall accuracy cannot hide weak performance on a less common class.
+After all training finishes, evaluate checkpoints, for example:
 
 ```bash
-python -m scripts.prepare_data --config configs/base.yaml
+python -m scripts.evaluate --config configs/mobilenet_v2.yaml --checkpoint outputs/checkpoints/mobilenet_v2.pt --output outputs/reports/mobilenet_v2.json
+python -m scripts.compare_models --output-dir outputs/reports/
 ```
 
-The split is approximately 80/10/10 within classes at the independent group level. It uses `cjdata.PID` when present; otherwise exact file-byte duplicates are grouped. The script fails on conflicting labels within one group or too few independent groups per class. Inspect the resulting split counts and verify source-specific subject metadata before treating results as clinical evidence.
+Use `scripts.evaluate` for each checkpoint. The comparison script combines evaluation reports with validation histories; it does not train models or create missing results. The four ViTs must use the same input resolution to form an ensemble. `scripts.ensemble` implements the equal-weight mean of their softmax probabilities, following the ensemble approach described in the ViT brain tumor paper. This repository uses PyTorch/timm model implementations, while that paper uses its own data and framework setup; results are not directly comparable. [ViT ensemble paper](https://www.mdpi.com/1718-7729/29/10/590)
 
-## Training
+## Repository map
 
-Run each model on the same prepared train/validation/test split. In Colab, run these one at a time:
-
-```bash
-!python -m scripts.train --config configs/vgg16.yaml
-!python -m scripts.train --config configs/mobilenet_v2.yaml
-!python -m scripts.train --config configs/efficientnet_b3.yaml
-!python -m scripts.train --config configs/vit_b_16.yaml
-!python -m scripts.train --config configs/vit_b_32.yaml
-!python -m scripts.train --config configs/vit_l_16.yaml --batch-size 2
-!python -m scripts.train --config configs/vit_l_32.yaml --batch-size 2
+```text
+configs/       Reproducible per-model YAML settings
+scripts/       Data preparation, training, evaluation, ensemble, comparison CLIs
+src/           Dataset, models, training, metrics, visualization
+Images/        Illustrative source images
+outputs/       Generated checkpoints, histories, reports, and figures (not committed)
 ```
 
-Early stopping has a patience of six epochs. Checkpoints are selected using a validation score that equally averages accuracy, macro precision, and macro recall. Macro-averaging gives each tumor class equal weight despite the class imbalance. The test split is not used for checkpoint selection. Epoch history files record loss, accuracy, macro precision, macro recall, macro-F1, selection score, and training duration. Reduce batch size if Colab runs out of GPU memory.
+## Resume bullet (XYZ format)
 
-## Evaluation and comparison
+Built a leakage-conscious comparative study of CNN-based (VGG16, MobileNetV2, EfficientNet-B3) and ViT (B/16, B/32, L/16, L/32) models for brain tumor MRI classification, applying ImageNet transfer learning, end-to-end fine-tuning, class-weighted training, early stopping, and validation-based hyperparameter selection across accuracy and macro precision/recall; achieved a best CNN validation selection score of **0.9907** with MobileNetV2, with ViT experiments in progress.
 
-Evaluate each selected checkpoint once on the held-out test split. Reports include accuracy, balanced accuracy, macro and weighted precision/recall, macro and weighted F1, confusion matrix, and per-class precision/recall.
+*Update this bullet with final held-out test metrics after completing the ViT runs; do not describe the current validation selection score as test accuracy.*
 
-```bash
-!python -m scripts.evaluate --config configs/vgg16.yaml --checkpoint outputs/checkpoints/vgg16.pt --output outputs/reports/vgg16.json
-!python -m scripts.evaluate --config configs/mobilenet_v2.yaml --checkpoint outputs/checkpoints/mobilenet_v2.pt --output outputs/reports/mobilenet_v2.json
-!python -m scripts.evaluate --config configs/efficientnet_b3.yaml --checkpoint outputs/checkpoints/efficientnet_b3.pt --output outputs/reports/efficientnet_b3.json
-!python -m scripts.evaluate --config configs/vit_b_16.yaml --checkpoint outputs/checkpoints/vit_b_16.pt --output outputs/reports/vit_b_16.json
-!python -m scripts.evaluate --config configs/vit_b_32.yaml --checkpoint outputs/checkpoints/vit_b_32.pt --output outputs/reports/vit_b_32.json
-!python -m scripts.evaluate --config configs/vit_l_16.yaml --checkpoint outputs/checkpoints/vit_l_16.pt --output outputs/reports/vit_l_16.json
-!python -m scripts.evaluate --config configs/vit_l_32.yaml --checkpoint outputs/checkpoints/vit_l_32.pt --output outputs/reports/vit_l_32.json
-!python -m scripts.compare_models --output-dir outputs/reports/
-```
+## References
 
-The comparison CSV ranks individual models and the fixed ensemble using validation metrics only, then reports separate test results, including per-class precision and recall.
-
-## Soft-voting ensemble
-
-The paper's ensemble consists of ViT-B/16, ViT-B/32, ViT-L/16, and ViT-L/32. It averages their softmax probabilities with equal weight, then predicts the class with the largest mean probability. This project provides these four model variants and uses the paper's `[-1, 1]` ViT input scaling. Train each checkpoint separately at the same resolution:
-
-```bash
-!python -m scripts.train --config configs/vit_b_16.yaml --image-size 224 --checkpoint outputs/checkpoints/vit_b_16_224.pt
-!python -m scripts.train --config configs/vit_b_32.yaml --image-size 224 --checkpoint outputs/checkpoints/vit_b_32_224.pt
-!python -m scripts.train --config configs/vit_l_16.yaml --image-size 224 --batch-size 2 --checkpoint outputs/checkpoints/vit_l_16_224.pt
-!python -m scripts.train --config configs/vit_l_32.yaml --image-size 224 --batch-size 2 --checkpoint outputs/checkpoints/vit_l_32_224.pt
-```
-
-For 384×384, repeat with `--image-size 384` and `_384` checkpoint names; use `--batch-size 1` or `2` if Colab runs out of GPU memory. The paper used a TPU for high-resolution training. Evaluate the 224×224 checkpoints together:
-
-```bash
-!python -m scripts.ensemble --configs configs/vit_b_16.yaml configs/vit_b_32.yaml configs/vit_l_16.yaml configs/vit_l_32.yaml --checkpoints outputs/checkpoints/vit_b_16_224.pt outputs/checkpoints/vit_b_32_224.pt outputs/checkpoints/vit_l_16_224.pt outputs/checkpoints/vit_l_32_224.pt --image-size 224 --output outputs/reports/vit_ensemble_224.json
-```
-
-Use the `_384.pt` checkpoints, `--image-size 384`, and `vit_ensemble_384.json` for the high-resolution ensemble. The code uses PyTorch ports of the original ViT families, while the paper used `vit-keras`; its reported scores also used a different data split and training setup, so they should not be treated as expected results here. The script saves ensemble metrics and a confusion matrix.
-
-## Verification
-
-Run `python -m unittest discover -s tests` after installing dependencies. The suite covers manifest loading and transforms, split reproducibility/duplicate separation, metrics, a tiny training/checkpoint smoke test, and all model output shapes. Real-dataset smoke tests remain to be performed because no MAT data or PyTorch runtime was available during this refactor. Full-scale training is intentionally not launched by the project commands.
-
-## Limitations
-
-- No dataset or verified patient metadata is committed. A patient-level split is possible only when `cjdata.PID` is present and correctly parsed.
-- Split fallback detects byte-identical duplicates, not near-duplicates.
-- The supplied notebook did not document an untouched subject-independent test cohort; this project establishes a new split, not an external validation.
-- Transform choices and model hyperparameters are sensible starting points and require validation-only tuning.
-- The pipeline currently reports training duration in the history file but does not benchmark inference latency or automatically generate plots.
-- This is a research/engineering refactor and is not a medical diagnostic system.
+1. [Performance of convolutional neural networks for the classification of brain tumors using magnetic resonance imaging](https://pmc.ncbi.nlm.nih.gov/articles/PMC10862681/). Inspiration for the CNN model shortlist and comparative-study framing.
+2. [Vision Transformer ensemble study for brain tumor classification](https://www.mdpi.com/1718-7729/29/10/590). Reference for the four ViT variants and equal-weight soft-voting idea.
+3. [Figshare brain tumor dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427). Source data.
