@@ -111,12 +111,6 @@ Images/        Illustrative source images
 outputs/       Generated checkpoints, histories, reports, and figures (not committed)
 ```
 
-## Resume bullet (XYZ format)
-
-Built a leakage-conscious comparative study framework for CNN-based (VGG16, MobileNetV2, EfficientNet-B3) and ViT (B/16, B/32, L/16, L/32) brain tumor MRI classification; achieved a best CNN validation selection score of **0.9907** with MobileNetV2 by applying ImageNet transfer learning, end-to-end fine-tuning, class-weighted training, and early stopping, while establishing a macro-metric validation protocol to guide hyperparameter tuning; ViT runs are in progress.
-
-*Update this bullet with final held-out test metrics after completing the ViT runs; do not describe the current validation selection score as test accuracy.*
-
 ## References
 
 1. [Performance of convolutional neural networks for the classification of brain tumors using magnetic resonance imaging](https://pmc.ncbi.nlm.nih.gov/articles/PMC10862681/). Inspiration for the CNN model shortlist and comparative-study framing.
