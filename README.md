@@ -113,7 +113,7 @@ outputs/       Generated checkpoints, histories, reports, and figures (not commi
 
 ## Resume bullet (XYZ format)
 
-Built a leakage-conscious comparative study of CNN-based (VGG16, MobileNetV2, EfficientNet-B3) and ViT (B/16, B/32, L/16, L/32) models for brain tumor MRI classification, applying ImageNet transfer learning, end-to-end fine-tuning, class-weighted training, early stopping, and validation-based hyperparameter selection across accuracy and macro precision/recall; achieved a best CNN validation selection score of **0.9907** with MobileNetV2, with ViT experiments in progress.
+Built a leakage-conscious comparative study framework for CNN-based (VGG16, MobileNetV2, EfficientNet-B3) and ViT (B/16, B/32, L/16, L/32) brain tumor MRI classification; achieved a best CNN validation selection score of **0.9907** with MobileNetV2 by applying ImageNet transfer learning, end-to-end fine-tuning, class-weighted training, and early stopping, while establishing a macro-metric validation protocol to guide hyperparameter tuning; ViT runs are in progress.
 
 *Update this bullet with final held-out test metrics after completing the ViT runs; do not describe the current validation selection score as test accuracy.*
 
