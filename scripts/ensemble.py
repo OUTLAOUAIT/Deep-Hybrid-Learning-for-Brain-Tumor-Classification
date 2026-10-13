@@ -60,6 +60,11 @@ def ensemble_probabilities(configs, checkpoints, loader, classes, device):
     mean_probabilities = total_probabilities / len(configs)
     result = classification_metrics(actual, mean_probabilities.argmax(dim=1).tolist(),
                                     mean_probabilities.tolist())
+    result["selection_score"] = (result["accuracy"] + result["precision_macro"] +
+                                 result["recall_macro"]) / 3.0
+    result["classes"] = classes
+    result["per_class"] = {name: result["report"].get(str(index), {})
+                           for index, name in enumerate(classes)}
     result["ensemble_method"] = "equal_weight_soft_voting"
     result["members"] = [config["model"] for config in configs]
     result["member_count"] = len(configs)
@@ -101,20 +106,26 @@ def main():
         parser.error("All ensemble members must use the same input normalization")
 
     root = Path(configs[0]["data_root"])
-    rows = load_manifest(root / "splits/test.csv")
-    classes = sorted({row["label"] for row in rows})
+    val_rows = load_manifest(root / "splits/val.csv")
+    test_rows = load_manifest(root / "splits/test.csv")
+    classes = sorted({row["label"] for row in test_rows})
     mapping = {name: index for index, name in enumerate(classes)}
-    dataset = BrainTumorDataset(rows, root,
-                                build_transforms(configs[0]["image_size"],
-                                    normalization=configs[0].get("normalization", "imagenet")),
-                                mapping)
+    transform = build_transforms(configs[0]["image_size"],
+                                 normalization=configs[0].get("normalization", "imagenet"))
+    val_dataset = BrainTumorDataset(val_rows, root, transform, mapping)
+    test_dataset = BrainTumorDataset(test_rows, root, transform, mapping)
     batch_size = args.batch_size or min(config.get("batch_size", 32) for config in configs)
     workers = min(config.get("workers", 0) for config in configs)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
-                        num_workers=workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
+                            num_workers=workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
+                             num_workers=workers)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    result = ensemble_probabilities(configs, args.checkpoints, loader, classes, device)
-    result["classes"] = classes
+    validation = ensemble_probabilities(configs, args.checkpoints, val_loader, classes, device)
+    result = ensemble_probabilities(configs, args.checkpoints, test_loader, classes, device)
+    result["validation"] = {key: validation[key] for key in (
+        "accuracy", "balanced_accuracy", "precision_macro", "recall_macro",
+        "f1_macro", "selection_score", "confusion_matrix", "per_class")}
     result["checkpoint_paths"] = [str(Path(path)) for path in args.checkpoints]
 
     output = Path(args.output)

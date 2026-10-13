@@ -1,18 +1,18 @@
 # Brain Tumor Classification (PyTorch)
 
-This repository provides a reproducible brain tumor classification project for the Figshare brain tumor dataset. The classes follow the notebook's implied mapping: `1 meningioma`, `2 glioma`, `3 pituitary`. The original notebook is preserved as `Hybrid_Deep_Learning_for_Brain_Tumor_classification.ipynb` for reference.
+This repository provides a comparative brain tumor classification study using transfer learning on the Figshare dataset. It benchmarks VGG16, MobileNetV2, EfficientNet-B3, four Vision Transformer variants, and a ViT soft-voting ensemble. The original notebook is preserved as `Hybrid_Deep_Learning_for_Brain_Tumor_classification.ipynb` for reference.
 
 ## What changed
 
-The notebook augmented images before splitting, allowing an augmented image and its source to cross train/test boundaries. It also split without stratification or patient grouping, used a preprocessing path inconsistent with pretrained ImageNet weights, and evaluated only one architecture. The new pipeline splits source images first, performs augmentation only in the training dataset, makes validation/test transforms deterministic, uses validation macro-F1 for checkpoint selection, and evaluates test data through a separate command. The split utility groups declared subject IDs and exact duplicate files. Patient-level separation cannot be guaranteed when source MAT files do not provide a usable `PID`.
+The notebook augmented images before splitting, allowing an augmented image and its source to cross train/test boundaries. It also split without patient grouping, used a preprocessing path inconsistent with pretrained ImageNet weights, and evaluated only one architecture. The refactored pipeline splits source images first, augments only training data, keeps validation/test transforms deterministic, uses validation accuracy and macro precision/recall for model selection, and evaluates the test split separately. Patient-level separation cannot be guaranteed when source MAT files do not provide a usable `PID`.
 
 ## Models
 
-1. `efficientnet_b0`: ImageNet initialized EfficientNet-B0 with a replaceable classifier.
-2. `efficientnet_vgg16_fusion`: EfficientNet-B0 and VGG16 feature maps are separately globally pooled and concatenated, followed by a compact trainable head. Both use the same ImageNet normalization.
-3. `vit_b_16`, `vit_b_32`, `vit_l_16`, and `vit_l_32`: the four ViT variants used in the paper, with pretrained backbones and task-specific classifiers.
+CNN comparison: `vgg16`, `mobilenet_v2`, and `efficientnet_b3`.
 
-All models return logits for the shared cross-entropy training/evaluation pipeline. Freezing and pretrained weights are configurable. The fusion model is GPU-memory intensive; its example config freezes both backbones and uses batch size 8. ViT-L variants need smaller Colab batches, especially at 384×384. Pretrained weights download on first use when `pretrained: true`.
+ViT comparison: `vit_b_16`, `vit_b_32`, `vit_l_16`, and `vit_l_32`, plus an equal-weight soft-voting ensemble of those four models.
+
+Each individual model starts from ImageNet pretrained weights and fine-tunes the complete network (`pretrained: true`, `freeze_backbone: false`). The configs use inverse-frequency class-weighted cross-entropy. ViTs use the paper's `[-1, 1]` input scaling; CNNs use ImageNet normalization. Pretrained weights download on first use.
 
 ## Setup
 
@@ -37,6 +37,8 @@ The commands below assume the dependencies in `requirements.txt` are installed. 
 
 Download the [Figshare brain tumor dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427) and place its extracted `*.mat` files under `data/raw/` (subdirectories are fine). It contains 3,064 T1-weighted contrast-enhanced images across meningioma, glioma, and pituitary classes. The preparation command extracts `cjdata.image`, maps the documented numeric labels, converts each image to per-image min-max grayscale PNG, and writes `data/processed/manifest.csv` plus train/val/test CSVs.
 
+The class counts are 708 meningioma, 1,426 glioma, and 930 pituitary images. Training uses inverse-frequency class weights; validation and test reports include macro, weighted, and per-class precision/recall so overall accuracy cannot hide weak performance on a less common class.
+
 ```bash
 python -m scripts.prepare_data --config configs/base.yaml
 ```
@@ -45,28 +47,36 @@ The split is approximately 80/10/10 within classes at the independent group leve
 
 ## Training
 
-Run the same training engine with the requested model config:
+Run each model on the same prepared train/validation/test split. In Colab, run these one at a time:
 
 ```bash
-python -m scripts.train --config configs/efficientnet_b0.yaml
-python -m scripts.train --config configs/efficientnet_vgg16_fusion.yaml
-python -m scripts.train --config configs/vit.yaml
+!python -m scripts.train --config configs/vgg16.yaml
+!python -m scripts.train --config configs/mobilenet_v2.yaml
+!python -m scripts.train --config configs/efficientnet_b3.yaml
+!python -m scripts.train --config configs/vit_b_16.yaml
+!python -m scripts.train --config configs/vit_b_32.yaml
+!python -m scripts.train --config configs/vit_l_16.yaml --batch-size 2
+!python -m scripts.train --config configs/vit_l_32.yaml --batch-size 2
 ```
 
-Configurations define image size, batch size, epochs, learning rate, weight decay, seed, pretrained weights, freezing, dropout, AMP and checkpoint location. The trainer saves the best validation macro-F1 checkpoint and an epoch history JSON next to it. CUDA is selected when available; CPU is supported. Mixed precision is enabled only for CUDA.
+Early stopping has a patience of six epochs. Checkpoints are selected using a validation score that equally averages accuracy, macro precision, and macro recall. Macro-averaging gives each tumor class equal weight despite the class imbalance. The test split is not used for checkpoint selection. Epoch history files record loss, accuracy, macro precision, macro recall, macro-F1, selection score, and training duration. Reduce batch size if Colab runs out of GPU memory.
 
 ## Evaluation and comparison
 
-Evaluate each selected checkpoint exactly once on the test split. Reports include accuracy, macro/weighted F1, macro precision/recall, a confusion matrix, per-class report, and one-vs-rest macro ROC-AUC when defined.
+Evaluate each selected checkpoint once on the held-out test split. Reports include accuracy, balanced accuracy, macro and weighted precision/recall, macro and weighted F1, confusion matrix, and per-class precision/recall.
 
 ```bash
-python -m scripts.evaluate --config configs/efficientnet_b0.yaml --checkpoint outputs/checkpoints/efficientnet_b0.pt --output outputs/reports/efficientnet_b0.json
-python -m scripts.evaluate --config configs/efficientnet_vgg16_fusion.yaml --checkpoint outputs/checkpoints/efficientnet_vgg16_fusion.pt --output outputs/reports/efficientnet_vgg16_fusion.json
-python -m scripts.evaluate --config configs/vit.yaml --checkpoint outputs/checkpoints/vit_b_16.pt --output outputs/reports/vit_b_16.json
-python -m scripts.compare_models --output-dir outputs/reports/
+!python -m scripts.evaluate --config configs/vgg16.yaml --checkpoint outputs/checkpoints/vgg16.pt --output outputs/reports/vgg16.json
+!python -m scripts.evaluate --config configs/mobilenet_v2.yaml --checkpoint outputs/checkpoints/mobilenet_v2.pt --output outputs/reports/mobilenet_v2.json
+!python -m scripts.evaluate --config configs/efficientnet_b3.yaml --checkpoint outputs/checkpoints/efficientnet_b3.pt --output outputs/reports/efficientnet_b3.json
+!python -m scripts.evaluate --config configs/vit_b_16.yaml --checkpoint outputs/checkpoints/vit_b_16.pt --output outputs/reports/vit_b_16.json
+!python -m scripts.evaluate --config configs/vit_b_32.yaml --checkpoint outputs/checkpoints/vit_b_32.pt --output outputs/reports/vit_b_32.json
+!python -m scripts.evaluate --config configs/vit_l_16.yaml --checkpoint outputs/checkpoints/vit_l_16.pt --output outputs/reports/vit_l_16.json
+!python -m scripts.evaluate --config configs/vit_l_32.yaml --checkpoint outputs/checkpoints/vit_l_32.pt --output outputs/reports/vit_l_32.json
+!python -m scripts.compare_models --output-dir outputs/reports/
 ```
 
-Comparison joins test reports to saved histories, ranks by the best validation macro-F1, and shows test metrics separately. It never creates missing results. Architecture-specific batch sizes and compute are not identical, so report training hardware, duration, and configuration alongside scores. Repeated seeds are not automated yet.
+The comparison CSV ranks individual models and the fixed ensemble using validation metrics only, then reports separate test results, including per-class precision and recall.
 
 ## Soft-voting ensemble
 

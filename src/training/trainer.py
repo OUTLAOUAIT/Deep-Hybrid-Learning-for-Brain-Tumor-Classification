@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import torch
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from src.evaluation.visualization import plot_history
 from .losses import build_loss
 
@@ -32,9 +32,17 @@ def _epoch(model, loader, criterion, device, optimizer=None, scaler=None):
         losses.append(loss.item())
         y_true.extend(labels.detach().cpu().tolist())
         y_pred.extend(logits.argmax(1).detach().cpu().tolist())
+    accuracy = accuracy_score(y_true, y_pred)
+    precision_macro = precision_score(y_true, y_pred, average="macro", zero_division=0)
+    recall_macro = recall_score(y_true, y_pred, average="macro", zero_division=0)
+    macro_f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
     return {"loss": sum(losses) / max(1, len(losses)),
-            "accuracy": accuracy_score(y_true, y_pred),
-            "macro_f1": f1_score(y_true, y_pred, average="macro", zero_division=0)}
+            "accuracy": accuracy,
+            "precision_macro": precision_macro,
+            "recall_macro": recall_macro,
+            "macro_f1": macro_f1,
+            # Equal parts overall accuracy and class-balanced macro precision/recall.
+            "selection_score": (accuracy + precision_macro + recall_macro) / 3.0}
 
 
 def fit(model, train_loader, val_loader, config, checkpoint, device):
@@ -54,7 +62,7 @@ def fit(model, train_loader, val_loader, config, checkpoint, device):
             counts[mapping[str(row["label"])]] += 1
         class_weights = (counts.sum() / (len(counts) * counts.clamp_min(1))).to(device)
     criterion = build_loss(config, class_weights)
-    best, stale, history = -1.0, 0, []
+    best, stale, history = float("-inf"), 0, []
     started = time.time()
     total_epochs = config.get("epochs", 30)
     print("Training on {} for up to {} epochs".format(device, total_epochs), flush=True)
@@ -63,15 +71,17 @@ def fit(model, train_loader, val_loader, config, checkpoint, device):
         val = _epoch(model, val_loader, criterion, device)
         row = {"epoch": epoch + 1, "train": train, "val": val}
         history.append(row)
-        scheduler.step(val["macro_f1"])
-        print("Epoch {}/{} - train loss {:.4f}, acc {:.4f} | val loss {:.4f}, acc {:.4f}, macro-F1 {:.4f}".format(
+        scheduler.step(val["selection_score"])
+        print("Epoch {}/{} - train loss {:.4f}, acc {:.4f} | val loss {:.4f}, acc {:.4f}, macro-P {:.4f}, macro-R {:.4f}, selection {:.4f}".format(
             epoch + 1, total_epochs, train["loss"], train["accuracy"],
-            val["loss"], val["accuracy"], val["macro_f1"]), flush=True)
-        if val["macro_f1"] > best:
-            best, stale = val["macro_f1"], 0
+            val["loss"], val["accuracy"], val["precision_macro"],
+            val["recall_macro"], val["selection_score"]), flush=True)
+        if val["selection_score"] > best:
+            best, stale = val["selection_score"], 0
             Path(checkpoint).parent.mkdir(parents=True, exist_ok=True)
             torch.save({"model": model.state_dict(), "epoch": epoch + 1,
-                        "val_macro_f1": best, "config": config}, checkpoint)
+                        "val_selection_score": best, "val_metrics": val,
+                        "config": config}, checkpoint)
         else:
             stale += 1
         if stale >= config.get("patience", 6):
@@ -80,6 +90,6 @@ def fit(model, train_loader, val_loader, config, checkpoint, device):
     history_path.write_text(json.dumps(
         {"history": history, "training_seconds": time.time() - started}, indent=2), encoding="utf-8")
     plot_history(history, Path("outputs/figures") / (Path(checkpoint).stem + "_curves.png"))
-    print("Training complete in {:.1f}s. Best validation macro-F1: {:.4f}. Checkpoint: {}".format(
+    print("Training complete in {:.1f}s. Best validation selection score: {:.4f}. Checkpoint: {}".format(
         time.time() - started, best, checkpoint), flush=True)
     return history

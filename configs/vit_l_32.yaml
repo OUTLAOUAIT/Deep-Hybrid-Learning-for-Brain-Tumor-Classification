@@ -13,6 +13,6 @@ freeze_backbone: false
 dropout: 0.1
 normalization: vit_keras
 loss: cross_entropy
-class_weighting: false
+class_weighting: true
 mixed_precision: true
 checkpoint: outputs/checkpoints/vit_l_32.pt

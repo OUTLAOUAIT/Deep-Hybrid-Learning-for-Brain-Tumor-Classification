@@ -35,6 +35,9 @@ def main():
                         config["image_size"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     result = evaluate(model, loader, args.checkpoint, device)
+    result["classes"] = classes
+    result["per_class"] = {name: result["report"].get(str(index), {})
+                           for index, name in enumerate(classes)}
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text(json.dumps(result, indent=2), encoding="utf-8")
     plot_confusion_matrix(result["confusion_matrix"], classes,
