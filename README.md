@@ -20,7 +20,7 @@ How do established CNN architectures and ImageNet-pretrained ViT architectures c
 | ViT | ViT-B/16, ViT-B/32, ViT-L/16, ViT-L/32 | Configured; training pending. |
 | Ensemble | Equal-weight soft voting across the four ViTs | Configured; requires all four trained checkpoints. |
 
-MobileNetV2 is the specific torchvision model used for the “MobileNet” comparison. The CNN model shortlist is motivated by a published brain MRI CNN comparison that identifies EfficientNetB3 and MobileNet among its top performers and also reports VGG16 results. The published study's scores are literature context only; they are not substituted for this project's results. [CNN comparison paper](https://pmc.ncbi.nlm.nih.gov/articles/PMC10862681/)
+MobileNetV2 is the specific torchvision model used for the “MobileNet” comparison. The CNN model shortlist is motivated by a published brain MRI CNN comparison that identifies EfficientNetB3 and MobileNet among its top performers and also reports VGG16 results.
 
 ## Current results
 
