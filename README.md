@@ -2,7 +2,7 @@
 
 A reproducible PyTorch comparative study of transfer learning and fine-tuning for three-class brain tumor MRI classification. The project benchmarks three CNNs against four Vision Transformers (ViTs), evaluates models with class-balanced metrics, and implements an equal-weight ViT soft-voting ensemble.
 
-> **Research status (October 2026):** The three CNN validation selection scores below came from one Colab run. The runtime crashed before ViT training. No ViT result is reported as an experiment yet, and the reported CNN values are not held-out test scores. The full comparison is ready to complete when GPU/TPU access is available.
+> **Research status (October 2026):** The CNN results below are validation selection scores; held-out CNN test results are not yet available. The ViT and ensemble values are held-out test accuracies reported after completing training. A full imbalance-aware comparison still needs macro and per-class precision/recall for all models.
 
 ![Illustrative brain MRI slices from the repository's original image assets](Images/types.png)
 
@@ -16,9 +16,9 @@ How do established CNN architectures and ImageNet-pretrained ViT architectures c
 
 | Family | Models | Status |
 |---|---|---|
-| CNN | VGG16, MobileNetV2, EfficientNet-B3 | Trained once; validation selection scores recorded below. Held-out test evaluation still needs to be run. |
-| ViT | ViT-B/16, ViT-B/32, ViT-L/16, ViT-L/32 | Configured; training pending. |
-| Ensemble | Equal-weight soft voting across the four ViTs | Configured; requires all four trained checkpoints. |
+| CNN | VGG16, MobileNetV2, EfficientNet-B3 | Trained; validation selection scores recorded below. Held-out test evaluation is pending. |
+| ViT | ViT-B/16, ViT-B/32, ViT-L/16, ViT-L/32 | Trained; held-out test accuracy recorded below. Class-level test metrics should be added for the imbalance-aware comparison. |
+| Ensemble | Equal-weight soft voting across the four ViTs | Evaluated; held-out test accuracy recorded below. Class-level test metrics should be added. |
 
 MobileNetV2 is the specific torchvision model used for the “MobileNet” comparison. The CNN model shortlist is motivated by a published brain MRI CNN comparison that identifies EfficientNetB3 and MobileNet among its top performers and also reports VGG16 results.
 
@@ -34,13 +34,15 @@ The score used for checkpoint selection is the unweighted average of validation 
 
 These numbers describe the run as reported by the training process. The per-model validation accuracy, macro precision, and macro recall are stored in each checkpoint's `.history.json`; use those and the held-out test reports for a full comparison. A validation score must not be presented as test performance. Runtime is hardware-dependent and is included only as the reported Colab run time.
 
-| ViT / ensemble | Project result |
-|---|---|
-| ViT-B/16 | Pending training and held-out evaluation |
-| ViT-B/32 | Pending training and held-out evaluation |
-| ViT-L/16 | Pending training and held-out evaluation |
-| ViT-L/32 | Pending training and held-out evaluation |
-| Four-model soft-voting ensemble | Pending four checkpoints and evaluation |
+| ViT / ensemble | Held-out test accuracy |
+|---|---:|
+| ViT-B/16 | 96.83% |
+| ViT-B/32 | 95.71% |
+| ViT-L/16 | 95.93% |
+| ViT-L/32 | 97.12% |
+| Four-model soft-voting ensemble | **97.38%** |
+
+These held-out test accuracies were reported after the ViT runs. Accuracy alone does not show whether performance is balanced across the three tumor classes. Add macro precision/recall and per-class precision/recall from the evaluation reports before drawing class-imbalance conclusions. The CNN values above are validation selection scores, so they are not directly comparable to this test-accuracy table; run test evaluation for the CNN checkpoints for an apples-to-apples comparison.
 
 ## Data and leakage controls
 
