@@ -27,6 +27,7 @@ def ensemble_probabilities(configs, checkpoints, loader, classes, device):
     parameter_count = 0
 
     for config, checkpoint in zip(configs, checkpoints):
+        collect_actual = total_probabilities is None
         model = build_model(config["model"], len(classes), False,
                             config.get("dropout", 0.3),
                             config.get("freeze_backbone", False),
@@ -48,7 +49,7 @@ def ensemble_probabilities(configs, checkpoints, loader, classes, device):
                     torch.cuda.synchronize(device)
                 inference_seconds += time.perf_counter() - started
                 model_probabilities.append(probabilities.cpu())
-                if not actual:
+                if collect_actual:
                     actual.extend(labels.tolist())
 
         current = torch.cat(model_probabilities, dim=0)
