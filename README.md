@@ -2,7 +2,7 @@
 
 A reproducible PyTorch comparative study of transfer learning and fine-tuning for three-class brain tumor MRI classification. The project benchmarks three CNNs against four Vision Transformers (ViTs), evaluates models with class-balanced metrics, and implements an equal-weight ViT soft-voting ensemble.
 
-> **Research status (October 2026):** The CNN results below are validation selection scores; held-out CNN test results are not yet available. The ViT and ensemble values are held-out test accuracies reported after completing training. A full imbalance-aware comparison still needs macro and per-class precision/recall for all models.
+> **Research status (October 2026):** Validation and held-out test results are reported for all three CNNs, all four ViTs, and the four-model ViT ensemble. Macro and class-wise precision/recall are included to make the comparison informative for the imbalanced classes.
 
 ![Illustrative brain MRI slices from the repository's original image assets](Images/types.png)
 
@@ -16,33 +16,56 @@ How do established CNN architectures and ImageNet-pretrained ViT architectures c
 
 | Family | Models | Status |
 |---|---|---|
-| CNN | VGG16, MobileNetV2, EfficientNet-B3 | Trained; validation selection scores recorded below. Held-out test evaluation is pending. |
-| ViT | ViT-B/16, ViT-B/32, ViT-L/16, ViT-L/32 | Trained; held-out test accuracy recorded below. Class-level test metrics should be added for the imbalance-aware comparison. |
-| Ensemble | Equal-weight soft voting across the four ViTs | Evaluated; held-out test accuracy recorded below. Class-level test metrics should be added. |
+| CNN | VGG16, MobileNetV2, EfficientNet-B3 | Trained and evaluated on validation and held-out test splits. |
+| ViT | ViT-B/16, ViT-B/32, ViT-L/16, ViT-L/32 | Trained and evaluated on validation and held-out test splits. |
+| Ensemble | Equal-weight soft voting across the four ViTs | Evaluated on validation and held-out test splits. |
 
 MobileNetV2 is the specific torchvision model used for the “MobileNet” comparison. The CNN model shortlist is motivated by a published brain MRI CNN comparison that identifies EfficientNetB3 and MobileNet among its top performers and also reports VGG16 results.
 
-## Current results
+## Results
 
-The score used for checkpoint selection is the unweighted average of validation accuracy, macro precision, and macro recall. Macro averaging weights the three classes equally, which is useful because Figshare's class counts are imbalanced. These values are **validation selection scores** (not accuracy percentages and not test-set results).
+The following values come from the project's generated comparison reports. Percentages are rounded to two decimal places. The validation selection score is the unweighted mean of validation accuracy, macro precision, and macro recall; it is used for checkpoint selection. Macro metrics give each class equal weight.
 
-| Rank so far | CNN model | Best validation selection score | Training time | Checkpoint |
-|---:|---|---:|---:|---|
-| 1 | MobileNetV2 | 0.9907 | 473.5 s | `outputs/checkpoints/mobilenet_v2.pt` |
-| 2 | EfficientNet-B3 | 0.9880 | 415.9 s | `outputs/checkpoints/efficientnet_b3.pt` |
-| 3 | VGG16 | 0.9787 | 1,397.3 s | `outputs/checkpoints/vgg16.pt` |
+### Validation results
 
-These numbers describe the run as reported by the training process. The per-model validation accuracy, macro precision, and macro recall are stored in each checkpoint's `.history.json`; use those and the held-out test reports for a full comparison. A validation score must not be presented as test performance. Runtime is hardware-dependent and is included only as the reported Colab run time.
+| Model | Selected epoch | Accuracy | Macro precision | Macro recall | Macro F1 | Selection score |
+|---|---:|---:|---:|---:|---:|---:|
+| MobileNetV2 | 9 | 99.10% | 99.00% | 99.13% | 99.06% | **99.07%** |
+| EfficientNet-B3 | 4 | 98.80% | 98.86% | 98.74% | 98.79% | 98.80% |
+| ViT four-model ensemble (224) | — | 98.80% | 98.77% | 98.88% | — | 98.81% |
+| ViT-B/32 (224) | 13 | 98.19% | 97.96% | 98.33% | 98.13% | 98.16% |
+| VGG16 | 16 | 97.89% | 97.76% | 97.95% | 97.85% | 97.87% |
+| ViT-L/16 (224) | 13 | 96.99% | 97.04% | 97.07% | 97.05% | 97.03% |
+| ViT-L/32 (224) | 6 | 96.69% | 96.79% | 96.61% | 96.68% | 96.70% |
+| ViT-B/16 (224) | 20 | 96.39% | 96.31% | 96.31% | 96.31% | 96.33% |
 
-| ViT / ensemble | Held-out test accuracy |
-|---|---:|
-| ViT-B/16 | 96.83% |
-| ViT-B/32 | 95.71% |
-| ViT-L/16 | 95.93% |
-| ViT-L/32 | 97.12% |
-| Four-model soft-voting ensemble | **97.38%** |
+### Held-out test results
 
-These held-out test accuracies were reported after the ViT runs. Accuracy alone does not show whether performance is balanced across the three tumor classes. Add macro precision/recall and per-class precision/recall from the evaluation reports before drawing class-imbalance conclusions. The CNN values above are validation selection scores, so they are not directly comparable to this test-accuracy table; run test evaluation for the CNN checkpoints for an apples-to-apples comparison.
+| Model | Accuracy | Balanced accuracy | Macro precision | Macro recall | Macro F1 |
+|---|---:|---:|---:|---:|---:|
+| ViT-B/16 (224) | **92.43%** | **92.81%** | **91.52%** | **92.81%** | **91.97%** |
+| ViT four-model ensemble (224) | 91.45% | 91.69% | 89.86% | 91.69% | 90.49% |
+| ViT-B/32 (224) | 89.80% | 90.43% | 88.12% | 90.43% | 88.77% |
+| ViT-L/32 (224) | 89.14% | 88.19% | 87.27% | 88.19% | 87.65% |
+| MobileNetV2 | 88.16% | 89.63% | 87.57% | 89.63% | 87.37% |
+| EfficientNet-B3 | 87.50% | 88.13% | 85.70% | 88.13% | 86.26% |
+| ViT-L/16 (224) | 86.51% | 85.38% | 84.85% | 85.38% | 84.95% |
+| VGG16 | 83.88% | 84.06% | 84.10% | 84.06% | 82.70% |
+
+### Per-class test precision / recall
+
+| Model | Glioma P / R | Meningioma P / R | Pituitary P / R |
+|---|---:|---:|---:|
+| VGG16 | 87.92% / 87.33% | 67.42% / 93.75% | 96.97% / 71.11% |
+| MobileNetV2 | 96.27% / 86.00% | 67.74% / 98.44% | 98.70% / 84.44% |
+| EfficientNet-B3 | 96.99% / 86.00% | 68.24% / 90.62% | 91.86% / 87.78% |
+| ViT-B/16 (224) | 94.52% / 92.00% | 82.43% / 95.31% | 97.62% / 91.11% |
+| ViT-B/32 (224) | 97.06% / 88.00% | 71.95% / 92.19% | 95.35% / 91.11% |
+| ViT-L/16 (224) | 90.54% / 89.33% | 71.23% / 81.25% | 92.77% / 85.56% |
+| ViT-L/32 (224) | 93.10% / 90.00% | 73.24% / 81.25% | 95.45% / 93.33% |
+| ViT four-model ensemble (224) | 96.45% / 90.67% | 76.62% / 92.19% | 96.51% / 92.22% |
+
+P = precision; R = recall. The test table ranks ViT-B/16 highest on accuracy, balanced accuracy, macro precision, macro recall, and macro F1 among these reported runs. The class-wise table shows why aggregate accuracy alone is insufficient: meningioma precision is lower than recall for every model, so false-positive behavior for that class merits attention. The ensemble improves over most individual ViTs but does not exceed ViT-B/16 on these test metrics.
 
 ## Data and leakage controls
 
